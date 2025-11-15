@@ -1,9 +1,4 @@
 
-# ============================================
-# TEMPLATE GENÉRICO — IMPLEMENTACIÓN BUBBLE SORT
-# Contrato: init(vals), step() -> {"a": int, "b": int, "swap": bool, "done": bool}
-# ============================================
-
 items = []
 n = 0
 
