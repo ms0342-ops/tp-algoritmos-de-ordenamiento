@@ -81,8 +81,13 @@
     running: false,
     speed: 50,
     highlight: {a:null,b:null},
-    imageBitmap: null
+    imageBitmap: null,
+    startTime: 0,
+    // NUEVA VARIABLE: Array para guardar los resultados
+    history: []
   };
+
+
 
   // ===== Helpers =====
   function randInt(min,max){ return (Math.random()*(max-min+1)+min)|0; }
@@ -222,7 +227,54 @@
     var name = $('algorithm').value.toLowerCase().replace(/[^a-z0-9_]/g,'');
     return 'algorithms/sort_' + name + '.py';
   }
+  
+  // ===== Tiempos =====
+  function updateTimeDisplay(ms){
+    $('timeElapsed').textContent = (ms/1000).toFixed(3) + ' s';
+  }
+  // ===== Historial =====
+  function renderHistoryTable(){
+    var container = $('historyTableContainer');
+    
+    if (state.history.length === 0) {
+      container.innerHTML = '<p style="color: var(--muted); font-size: 14px; text-align: center; margin: 10px 0;">Aún no hay ejecuciones completadas.</p>';
+      return;
+    }
 
+    var html = `
+      <table style="width:100%; border-collapse: collapse; font-size:13px; text-align:left;">
+        <thead style="background:#1f2937;">
+          <tr>
+            <th style="padding: 8px;">Algoritmo</th>
+            <th style="padding: 8px;">N</th>
+            <th style="padding: 8px; text-align:right;">Tiempo (s)</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    
+    // Generar filas de datos
+    state.history.forEach(function(r, index) {
+      var rowStyle = index % 2 === 0 ? 'background:#111827;' : 'background:#0f172a;';
+      html += `
+        <tr style="${rowStyle}">
+          <td style="padding: 8px;">${r.algorithm}</td>
+          <td style="padding: 8px;">${r.size}</td>
+          <td style="padding: 8px; text-align:right;">${(r.time / 1000).toFixed(3)}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+        </tbody>
+      </table>
+    `;
+    container.innerHTML = html;
+  }
+
+  function clearTimeDisplay(){
+    $('timeElapsed').textContent = '0.000 s';
+  }
   // ===== Control =====
   function rebuildData(){
     var n = parseInt($('size').value, 10);
@@ -283,8 +335,15 @@
     }
   }
 
+ 
   function run(){
     if(!pyStepFn) return;
+    if(state.running) return; // Evita iniciar dos veces
+    
+    // Iniciar cronómetro y display
+    state.startTime = performance.now();
+    clearTimeDisplay();
+
     state.running = true;
     (function loop(){
       if(!state.running) return;
@@ -294,8 +353,27 @@
         state.running=false;
         state.highlight = {a:null,b:null};
         draw();
+        
+        // 1. CALCULAR TIEMPO FINAL
+        var endTime = performance.now();
+        var timeMs = endTime - state.startTime;
+        updateTimeDisplay(timeMs);
+        
+        // 2. REGISTRAR EN EL HISTORIAL
+        var result = {
+          algorithm: $('algorithm').options[$('algorithm').selectedIndex].text.replace(' (PY)', ''),
+          size: parseInt($('size').value, 10),
+          time: timeMs
+          // Aquí se podrían añadir Comparaciones/Swaps si se implementan
+        };
+        state.history.push(result);
+        
+        // 3. RENDERIZAR LA TABLA
+        renderHistoryTable();
+        
         return;
       }
+
       state.highlight = { a: act.a, b: act.b };
       if(act.swap){
         var a=act.a, b=act.b, tmp=state.items[a];
@@ -306,27 +384,18 @@
       setTimeout(loop, wait);
     })();
   }
-  function stepOnce(){
-    if(!pyStepFn) return;
-    var act = pyStep();
-    if(act.done){
-      state.running=false;
-      state.highlight = {a:null,b:null};
-      draw();
-      return;
-    }
-    state.highlight = { a: act.a, b: act.b };
-    if(act.swap){
-      var a=act.a, b=act.b, tmp=state.items[a];
-      state.items[a]=state.items[b]; state.items[b]=tmp;
-    }
-    draw();
-  }
+    
+
   function reset(){
     state.running=false;
     state.highlight = {a:null,b:null};
     state.items = JSON.parse(JSON.stringify(state.original));
     draw();
+    // Reiniciar el display del tiempo
+    clearTimeDisplay();
+    // Limpiar el historial (si se desea)
+       state.history=[];
+       renderHistoryTable();
   }
 
   // ===== listeners del pool =====
@@ -386,6 +455,15 @@
 
   <main>
     <section class="controls">
+      <div class="card" style="grid-column: span 2;">
+        <label>Historial de Rendimiento</label>
+        <div id="historyTableContainer" style="overflow-x:auto; min-height:50px;">
+          <p style="color: var(--muted); font-size: 14px; text-align: center; margin: 10px 0;">
+            Aún no hay ejecuciones completadas.
+          </p>
+        </div>
+      </div>
+    </section>
       <div class="card">
         <label>Dataset</label>
         <div class="row">
@@ -398,11 +476,14 @@
             <option value="insertion">Insertion Sort (PY)</option>
             <option value="selection">Selection Sort (PY)</option>
             <option value="quick">Quick Sort (PY)</option>
-<option value="merge">Merge Sort (PY)</option>
-
+            <option value="shell"> Shell Sort (PY)</option>
           </select>
         </div>
       </div>
+
+            </select>
+          </div>
+        </div>
 
       <div class="card">
         <label>Tamaño y velocidad</label>
@@ -438,10 +519,13 @@
           <button id="reset">Reset</button>
           <button id="reloadPy">Recargar Python</button>
         </div>
-        <div style="margin-top:8px">Ejecución: <span class="pill" id="modeExec">Python</span></div>
+        <div style=<div style="margin-top:8px; display:flex; gap:16px;">
+          <div>Ejecución: <span class="pill" id="modeExec">Python</span></div>
+          <div>Tiempo: <span class="pill" id="timeElapsed">0.000 ms</span></div>
+        </div>
       </div>
     </section>
-
+  
     <section id="canvasWrap"></section>
 
     <div class="footer">
