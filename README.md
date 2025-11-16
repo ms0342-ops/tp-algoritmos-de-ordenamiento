@@ -11,7 +11,7 @@ Este proyecto es una **herramienta de visualización interactiva** diseñada par
 | `README.md`| Documentacion del proyecto e implementacion | Markdown|
 
 
-## Algoritmos implementados
+## Algoritmos implementados + Metricas implementadas
 
 - **Bubble Sort (sort_bubble.py):** Intercambia pares adyacentes hasta que el mayor "burbujea" al final.
 
@@ -22,6 +22,10 @@ Este proyecto es una **herramienta de visualización interactiva** diseñada par
 - **Quick Sort(sort_quick.py):** Divide el arreglo alrededor de un pivote y luego ordena recursivamente las dos mitades.
 
 - **Shell Sort(sort_shell.py):** Mejora de Insertion Sort, utilizando saltos (gaps) para mover elementos distantes.
+
+- **Metrica de tiempo**
+
+- **Metrica de historial de rendimiento**
 
 # 📝Notas de implementación 
  
